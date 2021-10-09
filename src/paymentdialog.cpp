@@ -102,7 +102,8 @@ void PaymentDialog::triggerMenuAction(QAction *action) {
 void PaymentDialog::setChangeTotal(int index) {
     if (index != 1) return;
     QLocale indonesian(QLocale::Indonesian, QLocale::Indonesia);
-    ui->lblChange->setText(QString("Kembali\nRp %1").arg(indonesian.toString(totalChange)));
+    emit passTotalChange(totalChange);
+    ui->lblChange->setText(QString("Total Bayar\nRp %1").arg(indonesian.toString(amount)));
     ui->btnClose->setAutoDefault(true);
     QTimer::singleShot(1, ui->btnClose, SLOT(setFocus()));
 }
@@ -110,8 +111,9 @@ void PaymentDialog::setChangeTotal(int index) {
 void PaymentDialog::processOrder() {
     if (!isPaymentValid) return;
     QMenu menu(this);
-    menu.addAction(ActionNotPrint);
+    QAction *actNotPrint = menu.addAction(ActionNotPrint);
     menu.addAction(ActionPrint);
+    menu.setActiveAction(actNotPrint);
     connect(&menu, SIGNAL(triggered(QAction*)), this, SLOT(triggerMenuAction(QAction*)));
     menu.exec(ui->lblChange->mapToGlobal(QPoint(150,0)));
 }
@@ -185,11 +187,38 @@ void PaymentDialog::sendOrderToServer(const QByteArray jsonData) {
 }
 
 void PaymentDialog::openDialogChange(Order &order) {
-    if (shouldPrint) {
-        Printer::printOrder(order);
-    }
     Printer::openDrawer();
-    this->setCurrentIndex(1);
+    if (shouldPrint) {
+        manager = new QNetworkAccessManager();
+        QString url  = setting.getApi();
+        request.setUrl(QUrl(QString("%1/api/profile/shop").arg(url)));
+        request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setTransferTimeout(5000);
+        manager->get(request);
+        QObject::connect(manager, &QNetworkAccessManager::finished,
+        this, [=](QNetworkReply *reply) {
+            manager->deleteLater();
+            QString answer = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
+            QJsonObject obj = doc.object();
+            int code = obj["code"].toInt();
+            if (code == 200) {
+                QJsonObject shopProfileObj = obj["data"].toObject();
+                ShopProfile shopProfile = ShopProfile::fromJSON(shopProfileObj);
+                Order ord = order;
+                Printer::printOrder(ord, shopProfile);
+                this->setCurrentIndex(1);
+            } else {
+                if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
+                    showErrorDialog("Server timeout");
+                    return;
+                }
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
+            }
+        });
+    }
 }
 
 void PaymentDialog::closePayment() {

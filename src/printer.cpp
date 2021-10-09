@@ -11,7 +11,7 @@
 Printer::Printer() {
 }
 
-void Printer::printOrder(Order &order) {
+void Printer::printOrder(Order &order, ShopProfile &shopProfile) {
     QMap<QString, QString> orderMap = parseOrderToMap(order);
     QPrinter printer(QPrinter::HighResolution);
     printer.setPrinterName(getPrinterName());
@@ -31,9 +31,9 @@ void Printer::printOrder(Order &order) {
     } else {
         doc->setDefaultStyleSheet("*{font-family:'Victor Mono';font-weight:bold;font-size:18px;width:100%;}tr{width:100%;}td{padding:3px0px;width:100%;}.qty{width:40%;text-align:right;}.price{width:30%;text-align:right;}.subtotal{width:35%;text-align:right;}");
     }
-    doc->setHtml("<p align='center' width='100%' style='margin:2px 0px;'>TOKO ALFAR</p>"
-                 "<p align='center' width='100%' style='margin:2px 0px;'>DEPAN PASAR KETAON, BANYUDONO, BOYOLALI</p>"
-                 "<p align='center' width='100%' style='margin:2px 0px;'>TELP (0276) 3283720</p>"
+    doc->setHtml(QString("<p align='center' width='100%' style='margin:2px 0px;'>%1</p>").arg(shopProfile.getName()) +
+                 QString("<p align='center' width='100%' style='margin:2px 0px;'>%1</p>").arg(shopProfile.getAddress()) +
+                 QString("<p align='center' width='100%' style='margin:2px 0px;'>TELP %1</p>").arg(shopProfile.getPhone()) +
                  "<table width='100%' style='border-collapse:collapse;margin-top:25px;'>"
                  "<tr>"
                  + QString("<td colspan='3' style='border-top: 1px double black'>Ksr: %1</td>").arg(orderMap["name"]) +
@@ -64,10 +64,10 @@ void Printer::printOrder(Order &order) {
                  "<td colspan='3' align='center'></td>"
                  "</tr>"
                  "<tr>"
-                 "<td colspan='3' align='center'>TERIMA KASIH ATAS KUNJUNGAN ANDA</td>"
+                 + QString("<td colspan='3' align='center'>%1</td>").arg(shopProfile.getThankyouMessage()) +
                  "</tr>"
                  "<tr>"
-                 "<td colspan='3' align='center'>BARANG YANG SUDAH DIBELI TIDAK DAPAT DIKEMBALIKAN</td>"
+                 + QString("<td colspan='3' align='center'>%1</td>").arg(shopProfile.getFootNote()) +
                  "</tr>"
                  "</table>");
     doc->setPageSize(printer.pageRect().size());

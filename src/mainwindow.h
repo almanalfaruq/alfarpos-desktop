@@ -88,6 +88,7 @@ private slots:
     void onSelectProduct(const Product &);
     void onCancelPayment();
     void onSuccessPayment();
+    void onPassTotalChange(const int &);
     void onCloseJoinBill(const Order &);
     void on_btnLogin_clicked();
 

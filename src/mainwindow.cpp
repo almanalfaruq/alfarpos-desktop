@@ -524,6 +524,7 @@ void MainWindow::openDialogPayment() {
     paymentDialog = new PaymentDialog();
     connect(paymentDialog, SIGNAL(canceled()), this, SLOT(onCancelPayment()), Qt::QueuedConnection);
     connect(paymentDialog, SIGNAL(paymentSuccess()), this, SLOT(onSuccessPayment()), Qt::QueuedConnection);
+    connect(paymentDialog, SIGNAL(passTotalChange(int)), this, SLOT(onPassTotalChange(int)), Qt::QueuedConnection);
     connect(paymentDialog, SIGNAL(closeDialog()), this, SLOT(onCloseDialog()), Qt::QueuedConnection);
 
     QVector<Product> products = model->getProducts();
@@ -555,7 +556,14 @@ void MainWindow::onCancelPayment() {
 void MainWindow::onSuccessPayment() {
     this->setDisabled(false);
     emit model->clearModelPressed();
+    this->ui->lblTotal->setText("TOTAL >>>");
+    this->ui->lcdTotal->display(0);
     focusEditableCell();
+}
+
+void MainWindow::onPassTotalChange(const int &totalChange) {
+    this->ui->lblTotal->setText("KEMBALI >>>");
+    this->ui->lcdTotal->display(totalChange);
 }
 
 void MainWindow::onCloseJoinBill(const Order &order) {

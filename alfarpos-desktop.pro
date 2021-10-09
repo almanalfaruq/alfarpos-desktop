@@ -31,6 +31,7 @@ SOURCES += \
     src/productordermodel.cpp \
     src/productselectmodel.cpp \
     src/setting.cpp \
+    src/shopprofile.cpp \
     src/spinboxpayment.cpp \
     src/tablecashier.cpp \
     src/tableproductdialog.cpp \
@@ -58,6 +59,7 @@ HEADERS += \
     src/productordermodel.h \
     src/productselectmodel.h \
     src/setting.h \
+    src/shopprofile.h \
     src/spinboxpayment.h \
     src/tablecashier.h \
     src/tableproductdialog.h \

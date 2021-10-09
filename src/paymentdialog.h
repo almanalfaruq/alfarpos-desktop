@@ -16,6 +16,7 @@
 #include "setting.h"
 #include "order.h"
 #include "printer.h"
+#include "shopprofile.h"
 
 namespace Ui {
 class PaymentDialog;
@@ -44,7 +45,7 @@ private:
     int total = 0, amount = 0, totalChange = 0;
     bool isPaymentValid;
     bool shouldPrint = false;
-    const QString ActionPrint = "Cetak nota", ActionNotPrint = "Tanpa cetak nota";
+    const QString ActionPrint = "Cetak nota", ActionNotPrint = "&Tanpa cetak nota";
     Order order;
 
     void processOrder();
@@ -60,6 +61,7 @@ signals:
     void canceled();
     void paymentSuccess();
     void closeDialog();
+    void passTotalChange(const int &);
 
 private slots:
     void on_btnOK_clicked();

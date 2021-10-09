@@ -230,8 +230,35 @@ void OrderWindow::showErrorDialog(const QString &message) {
 }
 
 void OrderWindow::reprintOrder(Order &order) {
-    Printer::printOrder(order);
-    this->close();
+    manager = new QNetworkAccessManager();
+    QString url  = setting.getApi();
+    request.setUrl(QUrl(QString("%1/api/profile/shop").arg(url)));
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setTransferTimeout(5000);
+    manager->get(request);
+    QObject::connect(manager, &QNetworkAccessManager::finished,
+    this, [=](QNetworkReply *reply) {
+        manager->deleteLater();
+        QString answer = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
+        QJsonObject obj = doc.object();
+        int code = obj["code"].toInt();
+        if (code == 200) {
+            QJsonObject shopProfileObj = obj["data"].toObject();
+            ShopProfile shopProfile = ShopProfile::fromJSON(shopProfileObj);
+            Order ord = order;
+            Printer::printOrder(ord, shopProfile);
+            this->close();
+        } else {
+            if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
+                showErrorDialog("Server timeout");
+                return;
+            }
+            QString message = obj["message"].toString();
+            showErrorDialog(message);
+        }
+    });
 }
 
 void OrderWindow::closeDialog() {
