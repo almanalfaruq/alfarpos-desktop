@@ -11,8 +11,8 @@ ShopProfile ShopProfile::fromJSON(QJsonObject &obj) {
     QString name = obj["name"].toString();
     QString address = obj["address"].toString();
     QString phone = obj["phone"].toString();
-    QString thankyouMessage = obj["thankyouMessage"].toString();
-    QString footNote = obj["footNote"].toString();
+    QString thankyouMessage = obj["thankyou_message"].toString();
+    QString footNote = obj["foot_note"].toString();
     return ShopProfile(name, address, phone, thankyouMessage, footNote);
 }
 
