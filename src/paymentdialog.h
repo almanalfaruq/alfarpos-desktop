@@ -38,7 +38,6 @@ protected:
 private:
     Ui::PaymentDialog *ui;
 
-    Setting setting;
     QVector<Product> products;
     QNetworkAccessManager *manager;
     QNetworkRequest request;

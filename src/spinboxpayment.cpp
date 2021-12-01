@@ -15,3 +15,17 @@ int SpinBoxPayment::valueFromText(const QString &text) const {
     QString str = text;
     return str.remove(0, 3).remove('.').toInt();
 }
+
+void SpinBoxPayment::keyPressEvent(QKeyEvent *event) {
+    QSpinBox::keyPressEvent(event);
+    setupSeparator();
+}
+
+void SpinBoxPayment::setupSeparator() {
+    int val = valueFromText(text());
+    clearFocus();
+    setFocus();
+    setValue(val);
+    QKeyEvent *event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+    QSpinBox::keyPressEvent(event);
+}

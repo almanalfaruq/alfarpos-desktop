@@ -24,6 +24,7 @@ class Order {
 private:
     qint64 id = 0, userID, customerID, total, amountPaid, totalChange, paymentID;
     User user;
+    Customer customer;
     QDateTime dateTime;
     Status status;
     QString invoice;
@@ -37,6 +38,8 @@ public:
           QVector<OrderDetail> orderDetails);
 
     Order(qint64 id, qint64 userID, User user, qint64 customerID, Status status, qint64 total, qint64 amountPaid, qint64 totalChange,
+          qint64 paymentID, QString invoice, QVector<OrderDetail> orderDetails, QDateTime dateTime);
+    Order(qint64 id, qint64 userID, User user, Customer customer, Status status, qint64 total, qint64 amountPaid, qint64 totalChange,
           qint64 paymentID, QString invoice, QVector<OrderDetail> orderDetails, QDateTime dateTime);
 
     Order();
@@ -56,6 +59,7 @@ public:
 
     QByteArray parseToJSONOrder(Status status = Finish);
     User getUser() const;
+    Customer getCustomer() const;
     QDateTime getDateTime() const;
     void setId(const qint64 &value);
     static Order fromJSON(QJsonObject &obj);

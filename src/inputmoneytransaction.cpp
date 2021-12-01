@@ -8,6 +8,7 @@ InputMoneyTransaction::InputMoneyTransaction(QWidget *parent) : QDialog(parent) 
     txtAmount->setMaximum(20000000);
     txtAmount->setButtonSymbols(QSpinBox::NoButtons);
     lytMain->addRow(tLabel, txtAmount);
+    txtAmount->setFocus();
 
     tLabel = new QLabel(QString("Catatan:"), this);
     txtNote = new QLineEdit(this);

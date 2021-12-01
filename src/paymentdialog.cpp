@@ -9,8 +9,6 @@ PaymentDialog::PaymentDialog(QWidget *parent) :
     ui->setupUi(this);
     this->setCurrentIndex(0);
 
-    setting = Setting();
-
     connect(ui->txtAmount, SIGNAL(valueChanged(int)), this, SLOT(checkAmountPaid(int)));
     connect(this, SIGNAL(currentChanged(int)), this, SLOT(setChangeTotal(int)));
     ui->txtAmount->setFocus();
@@ -33,10 +31,11 @@ void PaymentDialog::setProducts(const QVector<Product> &products) {
 }
 
 void PaymentDialog::getPaymentType() {
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     manager = new QNetworkAccessManager();
     request.setUrl(QUrl(QString("%1/api/payments").arg(url)));
     request.setTransferTimeout(5000);
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     manager->get(request);
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
@@ -137,7 +136,11 @@ bool PaymentDialog::eventFilter(QObject *watched, QEvent *event) {
 }
 
 void PaymentDialog::closeEvent(QCloseEvent *) {
-    emit closeDialog();
+    if (this->currentIndex() == 0) {
+        emit closeDialog();
+        return;
+    }
+    closePayment();
 }
 
 void PaymentDialog::cancelPayment() {
@@ -158,9 +161,9 @@ Order PaymentDialog::createOrder() {
 
 void PaymentDialog::sendOrderToServer(const QByteArray jsonData) {
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/orders").arg(url)));
-    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(5000);
     manager->post(request, jsonData);
@@ -193,9 +196,9 @@ void PaymentDialog::openDialogChange(Order &order) {
         return;
     }
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/profile/shop").arg(url)));
-    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
     request.setTransferTimeout(5000);
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     manager->get(request);

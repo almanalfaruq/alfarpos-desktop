@@ -7,8 +7,6 @@
 #include <QDir>
 #include "setting.h"
 
-Setting setting;
-
 void myMessageHandler(QtMsgType type, const QMessageLogContext &, const QString & msg) {
     QString txt;
     QDateTime now = QDateTime::currentDateTime();
@@ -17,7 +15,7 @@ void myMessageHandler(QtMsgType type, const QMessageLogContext &, const QString 
         txt = QString("Info: %1").arg(msg);
         break;
     case QtDebugMsg:
-        if (!setting.getDebug()) return;
+        if (!Setting::getInstance().getDebug()) return;
         txt = QString("%1 - Debug: %2").arg(now.toString(Qt::DateFormat::ISODateWithMs), msg);
         break;
     case QtWarningMsg:
@@ -42,7 +40,6 @@ void myMessageHandler(QtMsgType type, const QMessageLogContext &, const QString 
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
-    setting = Setting();
     qInstallMessageHandler(myMessageHandler);
     MainWindow w;
     w.show();

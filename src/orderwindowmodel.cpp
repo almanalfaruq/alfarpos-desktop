@@ -1,15 +1,36 @@
 #include "orderwindowmodel.h"
 
 OrderWindowModel::OrderWindowModel(QObject *parent) : QAbstractTableModel(parent) {
-
 }
 
 void OrderWindowModel::setOrderData(const QVector<Order> &orders) {
+    clearModel();
     for (int row = 0; row < orders.count(); row++) {
         beginInsertRows(QModelIndex(), row, row);
         this->orders.append(orders[row]);
         endInsertRows();
     }
+}
+
+void OrderWindowModel::clearModel() {
+    if (rowCount() < 1) return;
+    beginRemoveRows(QModelIndex(), 0, rowCount() - 1);
+    this->orders.clear();
+    endRemoveRows();
+}
+
+void OrderWindowModel::addOrderData(const QVector<Order> &orders) {
+    int newRow = rowCount();
+    for (int row = 0; row < orders.count(); row++) {
+        beginInsertRows(QModelIndex(), newRow, newRow);
+        this->orders.append(orders[row]);
+        endInsertRows();
+        newRow++;
+    }
+}
+
+void OrderWindowModel::setHasNext(const bool &hasNext) {
+    this->hasNext = hasNext;
 }
 
 QVector<Order> OrderWindowModel::getOrders() {
@@ -38,7 +59,7 @@ QVariant OrderWindowModel::data(const QModelIndex &index, int role) const {
         case 2:
             return order.getInvoice();
         case 3:
-            return order.getCustomerID();
+            return order.getCustomer().getName();
         case 4:
             return order.getTotalFormatted();
         }
@@ -67,9 +88,17 @@ QVariant OrderWindowModel::headerData(int section, Qt::Orientation orientation, 
 }
 
 void OrderWindowModel::onSelectionChange(const QModelIndex &index) {
-    emit onSelectOrder(orders.at(index.row()));
+    int row = index.row();
+    if (rowCount() < 1 || row < 0) {
+        return;
+    }
+    emit onSelectOrder(orders.at(row));
+    if (row >= rowCount() - 3 && hasNext) emit onFetchMore();
 }
 
 void OrderWindowModel::onEnterPressed(const QModelIndex &index) {
+    if (rowCount() < 1) {
+        return;
+    }
     emit onChoosenOrder(orders.at(index.row()));
 }

@@ -25,6 +25,9 @@
    <property name="editTriggers">
     <set>QAbstractItemView::NoEditTriggers</set>
    </property>
+   <property name="selectionMode">
+    <enum>QAbstractItemView::SingleSelection</enum>
+   </property>
    <property name="selectionBehavior">
     <enum>QAbstractItemView::SelectRows</enum>
    </property>
@@ -35,8 +38,14 @@
      <x>0</x>
      <y>210</y>
      <width>800</width>
-     <height>220</height>
+     <height>201</height>
     </rect>
+   </property>
+   <property name="verticalScrollBarPolicy">
+    <enum>Qt::ScrollBarAsNeeded</enum>
+   </property>
+   <property name="horizontalScrollBarPolicy">
+    <enum>Qt::ScrollBarAlwaysOff</enum>
    </property>
    <property name="editTriggers">
     <set>QAbstractItemView::NoEditTriggers</set>
@@ -90,7 +99,7 @@
      <x>10</x>
      <y>10</y>
      <width>47</width>
-     <height>16</height>
+     <height>31</height>
     </rect>
    </property>
    <property name="text">
@@ -122,7 +131,7 @@
      <x>270</x>
      <y>10</y>
      <width>47</width>
-     <height>16</height>
+     <height>31</height>
     </rect>
    </property>
    <property name="text">
@@ -148,11 +157,30 @@
      <x>470</x>
      <y>10</y>
      <width>80</width>
-     <height>21</height>
+     <height>31</height>
     </rect>
    </property>
    <property name="text">
     <string>Cari</string>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="pbWait">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>410</y>
+     <width>801</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="maximum">
+    <number>0</number>
+   </property>
+   <property name="value">
+    <number>-1</number>
+   </property>
+   <property name="format">
+    <string>Sedang mengambil data...</string>
    </property>
   </widget>
  </widget>

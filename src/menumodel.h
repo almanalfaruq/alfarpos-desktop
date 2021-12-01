@@ -15,9 +15,9 @@ protected:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 private:
-    QString menus[10][2] = {{"BAYAR", "+"}, {"RUBAH HARGA", "F7"}, {"RUBAH QTY", "F8"}, {"BATAL SEMUA TRANSAKSI", "HOME"},
+    QString menus[11][2] = {{"BAYAR", "+"}, {"RUBAH HARGA", "F7"}, {"RUBAH QTY", "F8"}, {"BATAL SEMUA TRANSAKSI", "HOME"},
         {"HOLD/MENUNDA TRANSAKSI", "F12"}, {"REPRINT NOTA", "PAGE UP"}, {"CATAT UANG MASUK", "CTRL+F7"},
-        {"CATAT UANG KELUAR", "CTRL+F8"},{"GABUNG BILL", "CTRL+F10"}, {"OPEN DRAWER", "CTRL+F11"},
+        {"CATAT UANG KELUAR", "CTRL+F8"},{"GABUNG BILL", "CTRL+F10"}, {"INFORMASI TRANSAKSI", "CTRL+F11"}, {"OPEN DRAWER", "="},
     };
 
 public slots:

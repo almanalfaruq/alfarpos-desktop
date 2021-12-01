@@ -19,6 +19,7 @@
 #include "inputmoneytransaction.h"
 #include "menuwindow.h"
 #include "printer.h"
+#include "transactionwindow.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -43,7 +44,7 @@ private:
     PaymentDialog *paymentDialog;
     OrderWindow *orderWindow;
     MenuWindow *menuWindow;
-    Setting setting;
+    TransactionWindow *transactionWindow;
     QString productListText;
     Order pendingOrder;
     User user;
@@ -60,6 +61,7 @@ private:
 
     void openDialogMoneyTransaction(const Type &type);
     void createMoneyTransaction(Money &money);
+    void printMoneyTransaction(Money &money);
 
     void showErrorDialog(const QString &);
     void login();
@@ -77,8 +79,9 @@ private slots:
     void openDialogOtherError(const QString &);
     void openDialogConfirmClearProduct();
     void openDialogJoinBill();
+    void openTransactionWindow();
     void openDrawer();
-    void openProductDialog(const QVector<Product> &);
+    void openProductDialog(const QVector<Product> &, const int &, const QString &);
     void openDialogMoneyIn();
     void openDialogMoneyOut();
     void openDialogPayment();

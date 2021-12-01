@@ -5,6 +5,7 @@ OrderWindow::OrderWindow(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::OrderWindow) {
     ui->setupUi(this);
+    ui->pbWait->setVisible(false);
 }
 
 OrderWindow::~OrderWindow() {
@@ -22,10 +23,6 @@ void OrderWindow::closeEvent(QCloseEvent *) {
 void OrderWindow::showEvent(QShowEvent *) {
     initTableOrderList();
     initTableOrderDetail();
-    connect(ui->tvOrderList, SIGNAL(onSelectionChange(QModelIndex)), orderModel, SLOT(onSelectionChange(QModelIndex)), Qt::QueuedConnection);
-    connect(ui->tvOrderList, SIGNAL(onEnterPressed(QModelIndex)), orderModel, SLOT(onEnterPressed(QModelIndex)), Qt::QueuedConnection);
-    connect(orderModel, SIGNAL(onSelectOrder(Order)), this, SLOT(onSelectOrder(Order)), Qt::QueuedConnection);
-    connect(orderModel, SIGNAL(onChoosenOrder(Order)), this, SLOT(onChoosenOrder(Order)), Qt::QueuedConnection);
     QShortcut *closeDialog = new QShortcut(QKeySequence(tr("ESC")), ui->tvOrderList);
     connect(closeDialog, SIGNAL(activated()), this, SLOT(closeDialog()));
     initOrderWithFilter();
@@ -58,6 +55,12 @@ void OrderWindow::initTableOrderList() {
         ui->tvOrderList->horizontalHeader()->setSectionResizeMode(
             c, QHeaderView::Stretch);
     }
+
+    connect(ui->tvOrderList, SIGNAL(onSelectionChange(QModelIndex)), orderModel, SLOT(onSelectionChange(QModelIndex)), Qt::QueuedConnection);
+    connect(ui->tvOrderList, SIGNAL(onEnterPressed(QModelIndex)), orderModel, SLOT(onEnterPressed(QModelIndex)), Qt::QueuedConnection);
+    connect(orderModel, SIGNAL(onSelectOrder(Order)), this, SLOT(onSelectOrder(Order)), Qt::QueuedConnection);
+    connect(orderModel, SIGNAL(onChoosenOrder(Order)), this, SLOT(onChoosenOrder(Order)), Qt::QueuedConnection);
+    connect(orderModel, SIGNAL(onFetchMore()), this, SLOT(onFetchMore()), Qt::QueuedConnection);
 }
 
 void OrderWindow::initTableOrderDetail() {
@@ -92,18 +95,20 @@ void OrderWindow::initTableOrderDetail() {
 void OrderWindow::initOrderWithFilter() {
     QDate date = QDate::currentDate();
     this->ui->dtOrderFilter->setDate(date);
-    QString dateFmt = QString("%1-%2-%3").arg(date.year()).arg(date.month()).arg(date.day());
-    getOrderWithFilter("", dateFmt);
+    dateFmt = QString("%1-%2-%3").arg(date.year()).arg(date.month()).arg(date.day());
+    getOrderWithFilter();
 }
 
-void OrderWindow::getOrderWithFilter(const QString invoice, const QString date) {
+void OrderWindow::getOrderWithFilter() {
+    page = 1;
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/orders/filters").arg(url)));
-    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(5000);
-    manager->post(request, parseToJSONPayload(invoice, date));
+    manager->post(request, parseToJSONPayload());
+    ui->pbWait->setVisible(true);
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
@@ -113,12 +118,16 @@ void OrderWindow::getOrderWithFilter(const QString invoice, const QString date) 
         int code = obj["code"].toInt();
         if (code == 200) {
             QVector<Order> result;
-            for (auto v : obj["data"].toArray()) {
+            QJsonObject data = obj["data"].toObject();
+            for (auto v : data["orders"].toArray()) {
                 QJsonObject element = v.toObject();
                 Order order = Order::fromJSON(element);
                 result.append(order);
             }
+            orderModel->setHasNext(data["has_next"].toBool());
             orderModel->setOrderData(result);
+            page++;
+            focusFirstRow();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
                 showErrorDialog("Server timeout");
@@ -127,29 +136,41 @@ void OrderWindow::getOrderWithFilter(const QString invoice, const QString date) 
             QString message = obj["message"].toString();
             showErrorDialog(message);
         }
+        ui->pbWait->setVisible(false);
+        reply->close();
+        reply->deleteLater();
     });
 }
 
-QByteArray OrderWindow::parseToJSONPayload(const QString invoice, const QString date) {
+QByteArray OrderWindow::parseToJSONPayload() {
     QJsonObject payload;
     QJsonArray statuses;
     statuses.push_back(QJsonValue(orderStatus));
     payload.insert("statuses", statuses);
     payload.insert("invoice", invoice);
-    payload.insert("start_date", date);
-    payload.insert("end_date", date);
+    payload.insert("start_date", dateFmt);
+    payload.insert("end_date", dateFmt);
+    payload.insert("page", page);
+    payload.insert("limit", 10);
+    payload.insert("sort", "desc");
 
     QJsonDocument doc(payload);
 
     return doc.toJson();
 }
 
+void OrderWindow::focusFirstRow() {
+    QModelIndex index = ui->tvOrderList->model()->index(0, 1);
+    ui->tvOrderList->setFocus();
+    ui->tvOrderList->selectRow(index.row());
+    ui->tvOrderList->scrollToTop();
+}
 
 void OrderWindow::on_btnSearch_clicked() {
-    QString invoice = this->ui->txtInvoiceFilter->toPlainText();
+    invoice = this->ui->txtInvoiceFilter->toPlainText();
     QDate date = this->ui->dtOrderFilter->date();
-    QString dateFmt = date.toString("yyyy-MM-dd");
-    getOrderWithFilter(invoice, dateFmt);
+    dateFmt = date.toString("yyyy-MM-dd");
+    getOrderWithFilter();
 }
 
 void OrderWindow::onSelectOrder(const Order &order) {
@@ -191,9 +212,9 @@ void OrderWindow::showReprintDialog(Order &order) {
 
 void OrderWindow::cancelSelectedOrder(Order &order) {
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/orders/status").arg(url)));
-    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(5000);
     manager->put(request, order.parseToJSONOrder(Status::Canceled));
@@ -215,6 +236,8 @@ void OrderWindow::cancelSelectedOrder(Order &order) {
             QString message = obj["message"].toString();
             showErrorDialog(message);
         }
+        reply->close();
+        reply->deleteLater();
     });
 }
 
@@ -231,11 +254,12 @@ void OrderWindow::showErrorDialog(const QString &message) {
 
 void OrderWindow::reprintOrder(Order &order) {
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/profile/shop").arg(url)));
-    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(5000);
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     manager->get(request);
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
@@ -258,6 +282,52 @@ void OrderWindow::reprintOrder(Order &order) {
             QString message = obj["message"].toString();
             showErrorDialog(message);
         }
+        reply->close();
+        reply->deleteLater();
+    });
+}
+
+void OrderWindow::onFetchMore() {
+    manager = new QNetworkAccessManager();
+    QString url  = Setting::getInstance().getApi();
+    request.setUrl(QUrl(QString("%1/api/orders/filters").arg(url)));
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setTransferTimeout(5000);
+    manager->post(request, parseToJSONPayload());
+    ui->tvOrderList->setDisabled(true);
+    ui->pbWait->setVisible(true);
+    QObject::connect(manager, &QNetworkAccessManager::finished,
+    this, [=](QNetworkReply *reply) {
+        manager->deleteLater();
+        QString answer = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
+        QJsonObject obj = doc.object();
+        int code = obj["code"].toInt();
+        if (code == 200) {
+            QVector<Order> result;
+            QJsonObject data = obj["data"].toObject();
+            for (auto v : data["orders"].toArray()) {
+                QJsonObject element = v.toObject();
+                Order order = Order::fromJSON(element);
+                result.append(order);
+            }
+            orderModel->setHasNext(data["has_next"].toBool());
+            orderModel->addOrderData(result);
+            page++;
+        } else {
+            if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
+                showErrorDialog("Server timeout");
+                return;
+            }
+            QString message = obj["message"].toString();
+            showErrorDialog(message);
+        }
+        ui->tvOrderList->setDisabled(false);
+        ui->tvOrderList->setFocus();
+        ui->pbWait->setVisible(false);
+        reply->close();
+        reply->deleteLater();
     });
 }
 

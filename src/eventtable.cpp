@@ -4,8 +4,9 @@ EventTable::EventTable(QWidget *parent) : QTableView(parent) {
 
 }
 
-void EventTable::selectionChanged(const QItemSelection &, const QItemSelection &) {
+void EventTable::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) {
     emit onSelectionChange(currentIndex());
+    QTableView::selectionChanged(selected, deselected);
 }
 
 void EventTable::keyPressEvent(QKeyEvent *event) {

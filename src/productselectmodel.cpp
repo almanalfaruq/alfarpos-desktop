@@ -3,12 +3,18 @@
 ProductSelectModel::ProductSelectModel(QObject *parent) : QAbstractTableModel(parent) {
 }
 
-void ProductSelectModel::setProductData(const QVector<Product> &products) {
+void ProductSelectModel::addProductData(const QVector<Product> &products) {
+    int newRow = rowCount();
     for (int row = 0; row < products.count(); row++) {
-        beginInsertRows(QModelIndex(), row, row);
+        beginInsertRows(QModelIndex(), newRow, newRow);
         this->products.append(products[row]);
         endInsertRows();
+        newRow++;
     }
+}
+
+void ProductSelectModel::setHasNext(const bool &hasNext) {
+    this->hasNext = hasNext;
 }
 
 Product ProductSelectModel::getData(const int index) {
@@ -63,4 +69,12 @@ QVariant ProductSelectModel::headerData(int section, Qt::Orientation orientation
     } else if (orientation == Qt::Vertical && role == Qt::DisplayRole)
         return QString::number(section + 1);
     return QVariant();
+}
+
+void ProductSelectModel::onSelectionChange(const QModelIndex &index) {
+    int row = index.row();
+    if (rowCount() < 1 || row < 0) {
+        return;
+    }
+    if (row >= rowCount() - 5 && hasNext) emit onFetchMore();
 }

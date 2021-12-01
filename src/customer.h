@@ -7,15 +7,17 @@
 class Customer {
 private:
     qint64 id;
-    QString code, name, address, phone;
+    QString name, address, phone;
+
 public:
     Customer();
-    Customer(qint64 id, QString code, QString name, QString address, QString phone);
+    Customer(qint64 id, QString name, QString address, QString phone);
+
     qint64 getId() const;
-    QString getCode() const;
-    QString getPhone() const;
-    QString getAddress() const;
     QString getName() const;
+    QString getAddress() const;
+    QString getPhone() const;
+
     static Customer fromJSON(QJsonObject &);
 };
 

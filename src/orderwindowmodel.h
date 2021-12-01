@@ -9,6 +9,8 @@ class OrderWindowModel : public QAbstractTableModel {
 public:
     explicit OrderWindowModel(QObject *parent = nullptr);
     void setOrderData(const QVector<Order> &);
+    void addOrderData(const QVector<Order> &);
+    void setHasNext(const bool &);
     QVector<Order> getOrders();
 
 protected:
@@ -24,9 +26,14 @@ public slots:
 signals:
     void onSelectOrder(const Order &);
     void onChoosenOrder(const Order &);
+    void onFetchMore();
 
 private:
     QVector<Order> orders;
+    bool hasNext;
+
+
+    void clearModel();
 };
 
 #endif // ORDERWINDOWMODEL_H

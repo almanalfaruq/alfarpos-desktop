@@ -15,13 +15,18 @@ private:
     Type type;
     double amount;
     QString note;
+    QDateTime createTime;
 
 public:
     Money();
     Money(Type type, double amount, QString note);
+    Money(Type type, double amount, QString note, QDateTime createTime);
+    static Money fromJSON(QJsonObject &);
     Type getType() const;
     double getAmount() const;
     QString getNote() const;
+    QDateTime getCreateTime() const;
+    QString getCreateTimeFmt() const;
 
     QByteArray parseToJSONPayload();
 };

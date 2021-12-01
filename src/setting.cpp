@@ -1,5 +1,7 @@
 #include "setting.h"
 
+Setting * p_instance = 0;
+
 Setting::Setting() {
     QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
     if (settings.value("init").toBool()) return;
@@ -9,42 +11,42 @@ Setting::Setting() {
     settings.setValue("printer-port", "COM10");
 }
 
-QString Setting::getApi() const {
+QString Setting::getApi() {
+    if (api != "") return api;
     QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    return settings.value("api", "http://localhost:8000").toString();
-}
-
-void Setting::setApi(const QString &value) {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    settings.setValue("api", value);
+    api = settings.value("api", "http://localhost:8000").toString();
+    return api;
 }
 
 QString Setting::getAuthToken() {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    return settings.value("token", "").toString();
+    return token;
 }
 
 void Setting::setAuthToken(const QString &token) {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    settings.setValue("token", token);
+    this->token = token;
 }
 
 void Setting::deleteAuthToken() {
-    QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    settings.setValue("token", "");
+    token = "";
 }
 
-QString Setting::getPrinter() const {
+QString Setting::getPrinter() {
+    if (printer != "") return printer;
     QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    return settings.value("printer", "EPSON TM-U220 Receipt").toString();
+    printer = settings.value("printer", "EPSON TM-U220 Receipt").toString();
+    return printer;
 }
 
-QString Setting::getPrinterPort() const {
+QString Setting::getPrinterPort() {
+    if (port != "") return port;
     QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    return settings.value("printer-port", "COM10").toString();
+    port = settings.value("printer-port", "COM10").toString();
+    return port;
 }
 
-bool Setting::getDebug() const {
+bool Setting::getDebug() {
+    if (debug != "") return debug.toLower() == "true";
     QSettings settings(QSettings::IniFormat, QSettings::UserScope, "Alfar-Dev", "AlfarPOS");
-    return settings.value("debug", false).toBool();
+    debug = settings.value("debug", false).toString();
+    return debug.toLower() == "true";
 }

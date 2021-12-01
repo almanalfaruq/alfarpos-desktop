@@ -6,6 +6,7 @@
 #include <QShortcut>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QProgressDialog>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     qRegisterMetaType<Product>("Product");
     qRegisterMetaType<Order>("Order");
     qRegisterMetaType<Type>("Type");
+    qRegisterMetaType<Money>("Money");
 
     ui->stackedWidget->setCurrentIndex(0);
 
@@ -37,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
-    setting.deleteAuthToken();
+    Setting::getInstance().deleteAuthToken();
     delete ui;
 }
 
@@ -64,12 +66,19 @@ void MainWindow::login() {
         showErrorDialog("Password tidak boleh kosong");
         return;
     }
+    QProgressDialog *progress = new QProgressDialog(this);
+    progress->setWindowModality(Qt::WindowModal);
+    progress->setLabelText("Sedang masuk...");
+    progress->setCancelButton(0);
+    progress->setRange(0,0);
+    progress->setMinimumDuration(0);
+    progress->show();
     QJsonObject loginPayload;
     loginPayload.insert("username", username);
     loginPayload.insert("password", password);
     QJsonDocument loginDoc(loginPayload);
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/users/login").arg(url)));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(5000);
@@ -85,7 +94,7 @@ void MainWindow::login() {
         if (code == 200) {
             QJsonObject data = obj["data"].toObject();
             QString token = data["token"].toString();
-            setting.setAuthToken(token);
+            Setting::getInstance().setAuthToken(token);
             QJsonObject userObj = data["user"].toObject();
             user = User::fromJSON(userObj);
             ui->txtUsername->clear();
@@ -100,6 +109,9 @@ void MainWindow::login() {
             QString message = obj["message"].toString();
             showErrorDialog(message);
         }
+        progress->cancel();
+        reply->close();
+        reply->deleteLater();
     });
 }
 
@@ -125,7 +137,7 @@ void MainWindow::initTableView() {
     connect(model, SIGNAL(productNotFound()), this, SLOT(openDialogNotFound()), Qt::QueuedConnection);
     connect(model, SIGNAL(timeoutError()), this, SLOT(openDialogTimeout()), Qt::QueuedConnection);
     connect(model, SIGNAL(otherError(QString)), this, SLOT(openDialogOtherError(QString)), Qt::QueuedConnection);
-    connect(model, SIGNAL(openProductDialog(QVector<Product>)), this, SLOT(openProductDialog(QVector<Product>)), Qt::QueuedConnection);
+    connect(model, SIGNAL(openProductDialog(QVector<Product>, int, QString)), this, SLOT(openProductDialog(QVector<Product>, int, QString)), Qt::QueuedConnection);
     connect(ui->tblItems, SIGNAL(onDeletePressed(QModelIndex)), model, SLOT(onDeleteProduct(QModelIndex)), Qt::QueuedConnection);
     connect(ui->tblItems, SIGNAL(onPlusPressed()), this, SLOT(openDialogPayment()), Qt::QueuedConnection);
     connect(ui->tblItems, SIGNAL(onEscPressed()), this, SLOT(openDialogLogout()), Qt::QueuedConnection);
@@ -202,8 +214,12 @@ void MainWindow::initShortcut() {
     QShortcut *joinBillShortcut = new QShortcut(QKeySequence(tr("CTRL+F10")), ui->tblItems);
     connect(joinBillShortcut, SIGNAL(activated()), this, SLOT(openDialogJoinBill()));
 
-    // Shortcut to check for transaction that being hold
-    QShortcut *openDrawerShortcut = new QShortcut(QKeySequence(tr("CTRL+F11")), ui->tblItems);
+    // Shortcut to check for seeing the transaction
+    QShortcut *openTransactionWindow = new QShortcut(QKeySequence(tr("CTRL+F11")), ui->tblItems);
+    connect(openTransactionWindow, SIGNAL(activated()), this, SLOT(openTransactionWindow()));
+
+    // Shortcut to check for open the drawer
+    QShortcut *openDrawerShortcut = new QShortcut(QKeySequence(tr("=")), ui->tblItems);
     connect(openDrawerShortcut, SIGNAL(activated()), this, SLOT(openDrawer()));
 
     // Shortcut to open menu window
@@ -236,7 +252,7 @@ void MainWindow::onEditProduct(const bool &isDelete) {
         productCount = products.count() - 1;
     }
     int lastRow = products.count() - 2;
-    if (!isDelete && products[lastRow].getIsOpenPrice() && !isProductCountSame) {
+    if (lastRow >= 0 && !isDelete && products[lastRow].getIsOpenPrice() && !isProductCountSame) {
         Product product = products[lastRow];
         int newSellPrice = QInputDialog::getInt(this, tr("Ubah Harga Jual"),
                                                 tr("Harga Jual"), product.getSellPrice(), 0, 10000000, 1, &ok);
@@ -295,21 +311,28 @@ void MainWindow::onSelectMenuIndex(int index) {
         openDialogJoinBill();
         break;
     case 9:
+        openTransactionWindow();
+        break;
+    case 10:
         openDrawer();
         break;
     }
 }
 
 void MainWindow::openDialogHoldOrder() {
+    if (total == 0) {
+        showErrorDialog("Tidak bisa menunda transaksi kosong");
+        return;
+    }
     QMessageBox holdOrderDialog;
     int ret = holdOrderDialog.question(this, "Konfirmasi", "Simpan order terlebih dahulu untuk transaksi ini?");
     if (ret == QMessageBox::Yes) {
         Order order = createOrder();
         QByteArray jsonData = order.parseToJSONOrder(order.getStatus());
         manager = new QNetworkAccessManager();
-        QString url  = setting.getApi();
+        QString url  = Setting::getInstance().getApi();
         request.setUrl(QUrl(QString("%1/api/orders").arg(url)));
-        request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+        request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
         request.setTransferTimeout(5000);
         manager->post(request, jsonData);
@@ -332,13 +355,16 @@ void MainWindow::openDialogHoldOrder() {
                 QString message = obj["message"].toString();
                 showErrorDialog(message);
             }
+            reply->close();
+            reply->deleteLater();
         });
     }
 }
 
 void MainWindow::showHoldInvoice(const QString invoice) {
     QMessageBox okDialog;
-    okDialog.information(this, "Informasi", QString("Order disimpan dengan nomor invoice: %1").arg(invoice));
+    int ret = okDialog.information(this, "Informasi", QString("Order disimpan dengan nomor invoice: %1").arg(invoice));
+    if (ret == QMessageBox::Ok) focusEditableCell();
 }
 
 void MainWindow::openDialogQty() {
@@ -410,6 +436,16 @@ void MainWindow::openDialogJoinBill() {
     this->setDisabled(true);
 }
 
+void MainWindow::openTransactionWindow() {
+    transactionWindow = new TransactionWindow();
+    connect(transactionWindow, SIGNAL(onCloseEvent()), this, SLOT(onCloseDialog()), Qt::QueuedConnection);
+
+    transactionWindow->setWindowModality(Qt::ApplicationModal);
+    transactionWindow->setWindowTitle("Informasi Uang Masuk/Keluar");
+    transactionWindow->show();
+    this->setDisabled(true);
+}
+
 void MainWindow::openDrawer() {
     Printer::openDrawer();
 }
@@ -424,12 +460,12 @@ void MainWindow::openDialogReprintBill() {
     this->setDisabled(true);
 }
 
-void MainWindow::openProductDialog(const QVector<Product> &products) {
+void MainWindow::openProductDialog(const QVector<Product> &products, const int &qty, const QString &query) {
     productDialog = new ProductDialog();
     connect(productDialog, SIGNAL(onSelectProduct(Product)), this, SLOT(onSelectProduct(Product)), Qt::QueuedConnection);
     connect(productDialog, SIGNAL(onCloseEvent()), this, SLOT(onCloseDialog()), Qt::QueuedConnection);
 
-    productDialog->setProducts(products);
+    productDialog->setProducts(products, qty, query);
     productDialog->setWindowModality(Qt::ApplicationModal);
     productDialog->show();
     this->setDisabled(true);
@@ -459,9 +495,9 @@ void MainWindow::openDialogMoneyTransaction(const Type &type) {
 void MainWindow::createMoneyTransaction(Money &money) {
     QByteArray jsonData = money.parseToJSONPayload();
     manager = new QNetworkAccessManager();
-    QString url  = setting.getApi();
+    QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/money").arg(url)));
-    request.setRawHeader("Authorization", QString("Bearer %1").arg(setting.getAuthToken()).toUtf8());
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(5000);
     manager->post(request, jsonData);
@@ -472,9 +508,10 @@ void MainWindow::createMoneyTransaction(Money &money) {
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
         int code = obj["code"].toInt();
-        if (code != 200) {
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
+        if (code == 200) {
+            QJsonObject element = obj["data"].toObject();
+            Money printedMoney = Money::fromJSON(element);
+            printMoneyTransaction(printedMoney);
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
                 showErrorDialog("Server timeout");
@@ -483,6 +520,41 @@ void MainWindow::createMoneyTransaction(Money &money) {
             QString message = obj["message"].toString();
             showErrorDialog(message);
         }
+        reply->close();
+        reply->deleteLater();
+    });
+}
+
+void MainWindow::printMoneyTransaction(Money &money) {
+    manager = new QNetworkAccessManager();
+    QString url  = Setting::getInstance().getApi();
+    request.setUrl(QUrl(QString("%1/api/profile/shop").arg(url)));
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(Setting::getInstance().getAuthToken()).toUtf8());
+    request.setTransferTimeout(5000);
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    manager->get(request);
+    QObject::connect(manager, &QNetworkAccessManager::finished,
+    this, [=](QNetworkReply *reply) {
+        manager->deleteLater();
+        QString answer = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
+        QJsonObject obj = doc.object();
+        int code = obj["code"].toInt();
+        if (code == 200) {
+            QJsonObject shopProfileObj = obj["data"].toObject();
+            ShopProfile shopProfile = ShopProfile::fromJSON(shopProfileObj);
+            Money printedMoney = money;
+            Printer::printMoneyTransaction(printedMoney, shopProfile);
+        } else {
+            if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
+                showErrorDialog("Server timeout");
+                return;
+            }
+            QString message = obj["message"].toString();
+            showErrorDialog(message);
+        }
+        reply->close();
+        reply->deleteLater();
     });
 }
 
@@ -516,9 +588,6 @@ void MainWindow::onSelectProduct(const Product &product) {
 }
 
 void MainWindow::openDialogPayment() {
-//    Printer printer = Printer();
-//    Order order = Order();
-//    printer.printOrder(order);
     if (total == 0) return;
 
     paymentDialog = new PaymentDialog();
@@ -543,7 +612,7 @@ void MainWindow::openDialogLogout() {
                                    QMessageBox::Ok | QMessageBox::Cancel,
                                    QMessageBox::Ok);
     if (ret == QMessageBox::Ok) {
-        setting.deleteAuthToken();
+        Setting::getInstance().deleteAuthToken();
         ui->stackedWidget->setCurrentIndex(0);
     }
 }
@@ -582,6 +651,7 @@ void MainWindow::onCloseJoinBill(const Order &order) {
 
 void MainWindow::onCloseDialog() {
     this->setDisabled(false);
+    if (ui->tblItems->model()->rowCount() < 1) return;
     focusEditableCell();
 }
 

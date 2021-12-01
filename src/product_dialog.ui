@@ -13,13 +13,13 @@
   <property name="windowTitle">
    <string>Data Barang</string>
   </property>
-  <widget class="TableProductDialog" name="tvSelectProduct">
+  <widget class="EventTable" name="tvSelectProduct">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
      <width>701</width>
-     <height>441</height>
+     <height>431</height>
     </rect>
    </property>
    <property name="editTriggers">
@@ -58,12 +58,31 @@
     <string>Batal (Esc)</string>
    </property>
   </widget>
+  <widget class="QProgressBar" name="pbWait">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>430</y>
+     <width>701</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="maximum">
+    <number>0</number>
+   </property>
+   <property name="value">
+    <number>-1</number>
+   </property>
+   <property name="format">
+    <string>Sedang mengambil data...</string>
+   </property>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TableProductDialog</class>
+   <class>EventTable</class>
    <extends>QTableView</extends>
-   <header>tableproductdialog.h</header>
+   <header>eventtable.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -8,8 +8,12 @@ class ProductSelectModel : public QAbstractTableModel {
     Q_OBJECT
 public:
     explicit ProductSelectModel(QObject *parent = nullptr);
-    void setProductData(const QVector<Product> &);
+    void addProductData(const QVector<Product> &);
+    void setHasNext(const bool &hasNext);
     Product getData(const int index);
+
+public slots:
+    void onSelectionChange(const QModelIndex &index);
 
 protected:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -19,9 +23,10 @@ protected:
 
 private:
     QVector<Product> products;
+    bool hasNext;
 
 signals:
-
+    void onFetchMore();
 };
 
 #endif // PRODUCTSELECTMODEL_H

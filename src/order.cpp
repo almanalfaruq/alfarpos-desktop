@@ -58,9 +58,19 @@ Order::Order(qint64 id, qint64 userID, User user, qint64 customerID, Status stat
     id(id), userID(userID), user(user), customerID(customerID), status(status), total(total), amountPaid(amountPaid), totalChange(totalChange),
     paymentID(paymentID), invoice(invoice), orderDetails(orderDetails), dateTime(dateTime) {}
 
+Order::Order(qint64 id, qint64 userID, User user, Customer customer, Status status, qint64 total, qint64 amountPaid, qint64 totalChange,
+             qint64 paymentID, QString invoice, QVector<OrderDetail> orderDetails, QDateTime dateTime) :
+    id(id), userID(userID), user(user), customer(customer), status(status), total(total), amountPaid(amountPaid), totalChange(totalChange),
+    paymentID(paymentID), invoice(invoice), orderDetails(orderDetails), dateTime(dateTime) {}
+
 User Order::getUser() const {
     return user;
 }
+
+Customer Order::getCustomer() const {
+    return customer;
+}
+
 
 QDateTime Order::getDateTime() const {
     return dateTime;
@@ -137,7 +147,9 @@ Order Order::fromJSON(QJsonObject &obj) {
         OrderDetail od = OrderDetail::fromJson(odObj);
         orderDetails.append(od);
     }
-    return Order(id, user.getId(), user, customer.getId(), status, total, amountPaid, totalChange, payment.getId(), invoice, orderDetails, dt);
+    Order od = Order(id, user.getId(), user, customer, status, total, amountPaid, totalChange, payment.getId(), invoice, orderDetails, dt);
+    od.customerID = customer.getId();
+    return od;
 }
 
 OrderDetail::OrderDetail(Product product, qint32 qty, qint64 subTotal, bool useSpecialPrice)

@@ -14,10 +14,7 @@ Printer::Printer() {
 void Printer::printOrder(Order &order, ShopProfile &shopProfile) {
     QMap<QString, QString> orderMap = parseOrderToMap(order);
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPrinterName(getPrinterName());
-    printer.setPageSizeMM(QSizeF(70, 279));
-    printer.setResolution(160);
-    printer.setDocName("Invoice");
+    setupPrinter(&printer, "Invoice");
     if (!printer.isValid()) {
         qDebug() << __FILE__ << __LINE__ << QString("Printer %1 isn't valid").arg(printer.printerName());
         return;
@@ -75,6 +72,76 @@ void Printer::printOrder(Order &order, ShopProfile &shopProfile) {
     doc->deleteLater();
 }
 
+void Printer::printMoneyTransaction(Money &money, ShopProfile &shopProfile) {
+    QPrinter printer(QPrinter::HighResolution);
+    setupPrinter(&printer, "Transaction");
+    if (!printer.isValid()) {
+        qDebug() << __FILE__ << __LINE__ << QString("Printer %1 isn't valid").arg(printer.printerName());
+        return;
+    }
+    QDateTime dateTime = QDateTime::currentDateTime();
+    QLocale indonesian(QLocale::Indonesian, QLocale::Indonesia);
+    QTextDocument *doc = new QTextDocument();
+    // personal reason
+    // the EPSON TM U220 will print slightly bold even when using light font
+    // but for the other printer, in this case IWARE IW-200U, should use bold style
+    if (printer.printerName().toLower().contains("epson")) {
+        doc->setDefaultStyleSheet("*{font-family:'Victor Mono Light';font-size:18px;width:100%;}tr{width:100%;}td{padding:6px0px;width:100%;}");
+    } else {
+        doc->setDefaultStyleSheet("*{font-family:'Victor Mono';font-weight:bold;font-size:18px;width:100%;}tr{width:100%;}td{padding:6px0px;width:100%;}");
+    }
+    QString title = "Telah membayar uang sebesar:";
+    if (money.getType() == Type::In) title = "Telah masuk uang sebesar:";
+    doc->setHtml(QString("<p align='center' width='100%' style='margin:2px 0px;'>%1</p>").arg(shopProfile.getName()) +
+                 QString("<p align='center' width='100%' style='margin:2px 0px;'>%1</p>").arg(shopProfile.getAddress()) +
+                 QString("<p align='center' width='100%' style='margin:2px 0px;'>TELP %1</p>").arg(shopProfile.getPhone()) +
+                 "<table width='100%' style='border-collapse: collapse; margin-top: 25px'>"
+                 "<tr>"
+                 "<td colspan='3' style='border-top: 1px double black; text-align: center'>"
+                 "Kwitansi"
+                 "</td>"
+                 "</tr>"
+                 "<tr>"
+                 "<td colspan='3' style='border-bottom: 1px dashed black; text-align: center'>"
+                 + QString("Tanggal transaksi: %1").arg(money.getCreateTimeFmt()) +
+                 "</td>"
+                 "</tr>"
+                 "<tr>"
+                 + QString("<td colspan='3'>%1</td>").arg(title) +
+                 "</tr>"
+                 "<tr>"
+                 + QString("<td colspan='3' style='padding-bottom: 10px'>Rp %1</td>").arg(indonesian.toString((int) money.getAmount())) +
+                 "</tr>"
+                 "<tr>"
+                 "<td colspan='3'>Sebagai:</td>"
+                 "</tr>"
+                 "<tr>"
+                 + QString("<td colspan='3' style='padding-bottom: 20px'>%1</td>").arg(money.getNote()) +
+                 "</tr>"
+                 "<tr>"
+                 "<td colspan='3'>Diterima dengan baik dan benar, oleh:</td>"
+                 "</tr>"
+                 "<tr>"
+                 "<td width='45%' style='padding-bottom: 55px;text-align: center;'>Pemberi</td>"
+                 "<td width='10%' style='padding-bottom: 55px;text-align: center;'></td>"
+                 "<td width='45%' style='padding-bottom: 55px;text-align: center;'>Penerima</td>"
+                 "</tr>"
+                 "<tr>"
+                 "<td width='45%' style='text-align: center;'>(.........)</td>"
+                 "<td width='10%' style='text-align: center;'></td>"
+                 "<td width='45%' style='text-align: center;'>(.........)</td>"
+                 "</tr>"
+                 "<tr>"
+                 "<td colspan='3' style='border-bottom: 1px double black; border-top: 1px dashed black; text-align: center' >"
+                 + QString("Tanggal cetak: %1").arg(dateTime.toString("dd-MM-yyyy hh:mm:ss")) +
+                 "</td>"
+                 "</tr>"
+                 "</table>");
+    doc->setPageSize(printer.pageRect().size());
+    doc->print(&printer);
+    doc->deleteLater();
+}
+
 QMap<QString, QString> Printer::parseOrderToMap(Order &order) {
     QMap<QString, QString> map;
     qint64 totalItem = 0, totalPcs = 0;
@@ -113,27 +180,32 @@ QMap<QString, QString> Printer::parseOrderToMap(Order &order) {
 
 QString Printer::getPrinterName() {
     QPrinterInfo info;
-    Setting setting = Setting();
-    if (setting.getPrinter() != "") return setting.getPrinter();
+    if (Setting::getInstance().getPrinter() != "") return Setting::getInstance().getPrinter();
     return info.defaultPrinterName();
 }
 
+void Printer::setupPrinter(QPrinter *printer, QString docName) {
+    printer->setPrinterName(getPrinterName());
+    printer->setPageSizeMM(QSizeF(67, 279));
+    printer->setResolution(160);
+    printer->setDocName(docName);
+}
+
 void Printer::openDrawer() {
-    Setting setting = Setting();
     // We cannot send command to USB00X using QSerialPort,
     // hence we're using the winspool (win32api) lib
-    if (setting.getPrinterPort().contains("USB")) {
+    if (Setting::getInstance().getPrinterPort().contains("USB")) {
         open();
         return;
     }
     QSerialPort serialPort;
-    serialPort.setPortName(setting.getPrinterPort());
+    serialPort.setPortName(Setting::getInstance().getPrinterPort());
     serialPort.setBaudRate(QSerialPort::Baud9600);
     serialPort.setParity(QSerialPort::NoParity);
     serialPort.setStopBits(QSerialPort::OneStop);
     serialPort.setFlowControl(QSerialPort::NoFlowControl);
     if (serialPort.open(QIODevice::WriteOnly)) {
-        qDebug() << __FILE__ << __LINE__ << QString("Success connecting to port %1").arg(setting.getPrinterPort());
+        qDebug() << __FILE__ << __LINE__ << QString("Success connecting to port %1").arg(Setting::getInstance().getPrinterPort());
         QByteArray data;
         data.push_back((unsigned char) 0x1B);
         data.push_back((unsigned char) 0x70);
@@ -144,22 +216,22 @@ void Printer::openDrawer() {
 
         if (bytesWritten == -1) {
             qDebug() << __FILE__ << __LINE__ << QObject::tr("Failed to write the data to port %1, error: %2")
-                     .arg(setting.getPrinterPort()).arg(serialPort.errorString())
+                     .arg(Setting::getInstance().getPrinterPort()).arg(serialPort.errorString())
                      << "\n";
         } else if (bytesWritten != data.size()) {
             qDebug() << __FILE__ << __LINE__ << QObject::tr("Failed to write all the data to port %1, error: %2")
-                     .arg(setting.getPrinterPort()).arg(serialPort.errorString())
+                     .arg(Setting::getInstance().getPrinterPort()).arg(serialPort.errorString())
                      << "\n";
         } else if (!serialPort.waitForBytesWritten(5000)) {
             qDebug() << __FILE__ << __LINE__ << QObject::tr("Operation timed out or an error "
                      "occurred for port %1, error: %2")
-                     .arg(setting.getPrinterPort()).arg(serialPort.errorString())
+                     .arg(Setting::getInstance().getPrinterPort()).arg(serialPort.errorString())
                      << "\n";
         }
         return;
     }
 
-    qDebug() << __FILE__ << __LINE__ << QString("Cannot connect to port %1").arg(setting.getPrinterPort());
+    qDebug() << __FILE__ << __LINE__ << QString("Cannot connect to port %1").arg(Setting::getInstance().getPrinterPort());
 }
 
 void Printer::open() {

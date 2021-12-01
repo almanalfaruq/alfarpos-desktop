@@ -55,6 +55,7 @@ void ProductModel::onDeleteProduct(const QModelIndex &index) {
 }
 
 void ProductModel::onClearModel() {
+    if (rowCount() == 0 || rowCount() == 1) return;
     beginRemoveRows(QModelIndex(), 0, rowCount() - 1);
     products.clear();
     endRemoveRows();
@@ -141,17 +142,17 @@ bool ProductModel::setData(const QModelIndex &index, const QVariant &value, int 
             return false;
         QStringList qtyCode = result.split("*");
         int qty = 1;
-        QString code = result;
+        QString query = result;
         if (qtyCode.length() > 1) {
-            qty = qtyCode.at(0).toInt();
-            code = qtyCode.at(1);
+            if (qtyCode.at(0).toInt() > 0)  qty = qtyCode.at(0).toInt();
+            query = qtyCode.at(1);
         }
 
         manager = new QNetworkAccessManager();
-        Setting settings = Setting();
-        QString url  = settings.getApi();
-        request.setUrl(QUrl(QString("%1/api/products?query=%2&page=1&limit=100").arg(url, code)));
+        QString url  = Setting::getInstance().getApi();
+        request.setUrl(QUrl(QString("%1/api/products?query=%2&page=1&limit=20").arg(url, query)));
         request.setTransferTimeout(5000);
+        request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
         manager->get(request);
         QObject::connect(manager, &QNetworkAccessManager::finished,
         this, [=](QNetworkReply *reply) {
@@ -177,12 +178,12 @@ bool ProductModel::setData(const QModelIndex &index, const QVariant &value, int 
                 }
 
                 if (result.count() == 1) {
-                    if (checkAndUpdateSameProduct(result[0])) return;
                     result[0].setQty(qty);
+                    if (checkAndUpdateSameProduct(result[0])) return;
                     products[products.count() - 1] = result[0];
                     addProduct(Product());
                 } else if (result.count() > 1) {
-                    emit openProductDialog(result);
+                    emit openProductDialog(result, qty, query);
                 }
             } else {
                 if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
@@ -192,6 +193,8 @@ bool ProductModel::setData(const QModelIndex &index, const QVariant &value, int 
                 QString message = obj["message"].toString();
                 emit otherError(message);
             }
+            reply->close();
+            reply->deleteLater();
         });
 
         return true;
@@ -206,11 +209,12 @@ Qt::ItemFlags ProductModel::flags(const QModelIndex &index) const {
 }
 
 bool ProductModel::checkAndUpdateSameProduct(const Product &product) {
+    if (product.getIsOpenPrice()) return false;
     for (int i = 0; i < products.count(); i++) {
         if (products[i].getID() == product.getID()) {
             Product tempProduct = products[i];
             products[i] = product;
-            products[i].setQty(tempProduct.getQty() + 1);
+            products[i].setQty(tempProduct.getQty() + product.getQty());
             emit editCompleted(false);
             return true;
         }

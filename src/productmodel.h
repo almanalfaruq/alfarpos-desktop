@@ -2,7 +2,6 @@
 #define PRODUCTMODEL_H
 
 #include <QAbstractTableModel>
-#include "product.h"
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
@@ -10,6 +9,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include "setting.h"
+#include "product.h"
 
 class ProductModel : public QAbstractTableModel {
     Q_OBJECT
@@ -47,7 +47,7 @@ private slots:
 signals:
     void editCompleted(const bool &isDelete);
     void changeQtyCompleted(const qint64 &, const int &);
-    void openProductDialog(const QVector<Product> &);
+    void openProductDialog(const QVector<Product> &, const int &, const QString &);
     void productNotFound();
     void timeoutError();
     void otherError(const QString &);

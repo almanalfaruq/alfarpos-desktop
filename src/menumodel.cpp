@@ -4,7 +4,7 @@ MenuModel::MenuModel(QObject *parent) : QAbstractTableModel(parent) {
 }
 
 int MenuModel::rowCount(const QModelIndex & /*parent*/) const {
-    return 10;
+    return 11;
 }
 
 int MenuModel::columnCount(const QModelIndex & /*parent*/) const {

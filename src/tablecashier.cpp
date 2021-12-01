@@ -15,7 +15,6 @@ void TableCashier::keyPressEvent(QKeyEvent *event) {
         if (currentIndex().row() + 1 == this->model()->rowCount() - 1 && state() != QAbstractItemView::EditingState) {
             QModelIndex idx = model()->index(currentIndex().row() + 1, 1);
             edit(idx);
-            return;
         }
         QTableView::keyPressEvent(event);
         break;

@@ -34,7 +34,8 @@ SOURCES += \
     src/shopprofile.cpp \
     src/spinboxpayment.cpp \
     src/tablecashier.cpp \
-    src/tableproductdialog.cpp \
+    src/transactiontablemodel.cpp \
+    src/transactionwindow.cpp \
     src/user.cpp
 
 HEADERS += \
@@ -62,7 +63,8 @@ HEADERS += \
     src/shopprofile.h \
     src/spinboxpayment.h \
     src/tablecashier.h \
-    src/tableproductdialog.h \
+    src/transactiontablemodel.h \
+    src/transactionwindow.h \
     src/user.h
 
 FORMS += \
@@ -70,7 +72,8 @@ FORMS += \
     src/menuwindow.ui \
     src/orderwindow.ui \
     src/paymentdialog.ui \
-    src/product_dialog.ui
+    src/product_dialog.ui \
+    src/transactionwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
