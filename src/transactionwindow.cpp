@@ -77,6 +77,7 @@ void TransactionWindow::getTransactionWithFilter(QString date) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -92,12 +93,13 @@ void TransactionWindow::getTransactionWithFilter(QString date) {
             focusLastRow();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
+        reply->close();
     });
 }
 
@@ -130,6 +132,7 @@ void TransactionWindow::reprintTransaction(Money &money) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -142,12 +145,13 @@ void TransactionWindow::reprintTransaction(Money &money) {
             this->close();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
+        reply->close();
     });
 }
 

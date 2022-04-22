@@ -40,6 +40,7 @@ void PaymentDialog::getPaymentType() {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -54,12 +55,13 @@ void PaymentDialog::getPaymentType() {
             ui->cbPaymentType->setCurrentIndex(0);
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
+        reply->close();
     });
 }
 
@@ -93,6 +95,8 @@ void PaymentDialog::triggerMenuAction(QAction *action) {
     if (actionText == ActionPrint) {
         shouldPrint = true;
     }
+    if (isProcessed) return;
+    isProcessed = true;
     order = createOrder();
     QByteArray jsonData = order.parseToJSONOrder(order.getStatus());
     sendOrderToServer(jsonData);
@@ -170,6 +174,7 @@ void PaymentDialog::sendOrderToServer(const QByteArray jsonData) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -177,15 +182,17 @@ void PaymentDialog::sendOrderToServer(const QByteArray jsonData) {
         if (code == 200) {
             QJsonObject orderObj = obj["data"].toObject();
             order = Order::fromJSON(orderObj);
+            isProcessed = false;
             openDialogChange(order);
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
+        reply->close();
     });
 }
 
@@ -195,6 +202,10 @@ void PaymentDialog::openDialogChange(Order &order) {
         this->setCurrentIndex(1);
         return;
     }
+    processPrint(order);
+}
+
+void PaymentDialog::processPrint(Order &order) {
     manager = new QNetworkAccessManager();
     QString url  = Setting::getInstance().getApi();
     request.setUrl(QUrl(QString("%1/api/profile/shop").arg(url)));
@@ -205,6 +216,7 @@ void PaymentDialog::openDialogChange(Order &order) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -217,12 +229,13 @@ void PaymentDialog::openDialogChange(Order &order) {
             this->setCurrentIndex(1);
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
+        reply->close();
     });
 }
 

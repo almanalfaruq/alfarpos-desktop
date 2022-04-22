@@ -42,8 +42,7 @@ private:
     QNetworkAccessManager *manager;
     QNetworkRequest request;
     int total = 0, amount = 0, totalChange = 0;
-    bool isPaymentValid;
-    bool shouldPrint = false;
+    bool isPaymentValid, shouldPrint = false, isProcessed = false;
     const QString ActionPrint = "Cetak nota", ActionNotPrint = "&Tanpa cetak nota";
     Order order;
 
@@ -56,6 +55,7 @@ private:
     void closePayment();
 
     void showErrorDialog(const QString &message);
+    void processPrint(Order &);
 signals:
     void canceled();
     void paymentSuccess();

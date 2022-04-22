@@ -112,6 +112,7 @@ void OrderWindow::getOrderWithFilter() {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -130,15 +131,14 @@ void OrderWindow::getOrderWithFilter() {
             focusFirstRow();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         ui->pbWait->setVisible(false);
         reply->close();
-        reply->deleteLater();
     });
 }
 
@@ -221,6 +221,7 @@ void OrderWindow::cancelSelectedOrder(Order &order) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -230,14 +231,13 @@ void OrderWindow::cancelSelectedOrder(Order &order) {
             this->close();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         reply->close();
-        reply->deleteLater();
     });
 }
 
@@ -264,6 +264,7 @@ void OrderWindow::reprintOrder(Order &order) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -276,14 +277,13 @@ void OrderWindow::reprintOrder(Order &order) {
             this->close();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         reply->close();
-        reply->deleteLater();
     });
 }
 
@@ -300,6 +300,7 @@ void OrderWindow::onFetchMore() {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -317,17 +318,16 @@ void OrderWindow::onFetchMore() {
             page++;
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         ui->tvOrderList->setDisabled(false);
         ui->tvOrderList->setFocus();
         ui->pbWait->setVisible(false);
         reply->close();
-        reply->deleteLater();
     });
 }
 

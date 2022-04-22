@@ -103,15 +103,14 @@ void MainWindow::login() {
             initCashier();
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         progress->cancel();
         reply->close();
-        reply->deleteLater();
     });
 }
 
@@ -339,6 +338,7 @@ void MainWindow::openDialogHoldOrder() {
         QObject::connect(manager, &QNetworkAccessManager::finished,
         this, [=](QNetworkReply *reply) {
             manager->deleteLater();
+            reply->deleteLater();
             QString answer = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
             QJsonObject obj = doc.object();
@@ -349,14 +349,13 @@ void MainWindow::openDialogHoldOrder() {
                 showHoldInvoice(invoice);
             } else {
                 if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                    showErrorDialog("Server timeout");
-                    return;
+                    showErrorDialog("Server timeout. Silakan coba lagi.");
+                } else {
+                    QString message = obj["message"].toString();
+                    showErrorDialog(message);
                 }
-                QString message = obj["message"].toString();
-                showErrorDialog(message);
             }
             reply->close();
-            reply->deleteLater();
         });
     }
 }
@@ -410,7 +409,7 @@ void MainWindow::openDialogNotFound() {
 }
 
 void MainWindow::openDialogTimeout() {
-    showErrorDialog("Server timeout");
+    showErrorDialog("Server timeout. Silakan coba lagi.");
 }
 
 void MainWindow::openDialogOtherError(const QString &msg) {
@@ -504,6 +503,7 @@ void MainWindow::createMoneyTransaction(Money &money) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -514,14 +514,13 @@ void MainWindow::createMoneyTransaction(Money &money) {
             printMoneyTransaction(printedMoney);
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         reply->close();
-        reply->deleteLater();
     });
 }
 
@@ -536,6 +535,7 @@ void MainWindow::printMoneyTransaction(Money &money) {
     QObject::connect(manager, &QNetworkAccessManager::finished,
     this, [=](QNetworkReply *reply) {
         manager->deleteLater();
+        reply->deleteLater();
         QString answer = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(answer.toUtf8());
         QJsonObject obj = doc.object();
@@ -547,14 +547,13 @@ void MainWindow::printMoneyTransaction(Money &money) {
             Printer::printMoneyTransaction(printedMoney, shopProfile);
         } else {
             if (reply->error() == QNetworkReply::OperationCanceledError || reply->error() == QNetworkReply::TimeoutError) {
-                showErrorDialog("Server timeout");
-                return;
+                showErrorDialog("Server timeout. Silakan coba lagi.");
+            } else {
+                QString message = obj["message"].toString();
+                showErrorDialog(message);
             }
-            QString message = obj["message"].toString();
-            showErrorDialog(message);
         }
         reply->close();
-        reply->deleteLater();
     });
 }
 
